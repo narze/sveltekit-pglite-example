@@ -12,6 +12,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.2.12",
+    "@electric-sql/pglite-repl": "^0.2.12",
     "@sveltejs/adapter-auto": "^3.3.1",
     "@sveltejs/kit": "^2.7.3",
     "@sveltejs/vite-plugin-svelte": "^4.0.0",

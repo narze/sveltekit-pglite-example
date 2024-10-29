@@ -16,12 +16,13 @@
 
   const DB_NAME = env.PUBLIC_IDB_NAME ?? "sveltekit-pglite-example"
 
-  let pgClient: ReturnType<typeof PGlite.create>
+  let pgClient = $state<ReturnType<typeof PGlite.create>>()
   let db: ReturnType<typeof drizzle>
   let ready = $state(false)
   let rawQuery = $state<string>("SELECT * FROM users;")
   let logs = $state<string[]>([])
   let liveQueryResult = $state<string>("")
+  let repl = $state<{ pg: typeof pgClient }>()
 
   onMount(async () => {
     pgClient = await PGlite.create({
@@ -32,6 +33,10 @@
     })
     db = drizzle(pgClient, { schema })
     ready = true
+
+    // @ts-ignore
+    await import("@electric-sql/pglite-repl/webcomponent")
+    repl!.pg = pgClient
   })
 
   async function createDb() {
@@ -123,4 +128,6 @@
       >{logs.join("\n")}</textarea
     >
   </div>
+
+  <pglite-repl bind:this={repl}>SELECT * FROM users;</pglite-repl>
 {/if}
