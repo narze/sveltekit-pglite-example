@@ -5,6 +5,8 @@
   import * as schema from "$lib/db/schema"
   import { onMount } from "svelte"
   import { env } from "$env/dynamic/public"
+  import { faker } from "@faker-js/faker"
+
   const sqlFiles = import.meta.glob("$lib/db/migrations/*.sql", {
     eager: true,
     query: "?raw",
@@ -42,7 +44,7 @@
   async function insert() {
     const db = drizzle(pgClient, { schema })
     const user = await db.insert(schema.users).values({
-      name: "test",
+      name: faker.person.firstName(),
       age: ~~(Math.random() * 80),
     })
 
@@ -65,15 +67,24 @@
 
   async function runRawQuery() {
     const result = await pgClient.exec(rawQuery)
-    log(result)
+    log(result[0].rows)
+  }
+
+  function truncateUsers() {
+    pgClient.exec("TRUNCATE TABLE users;")
+    log("Truncated users")
   }
 
   function startLiveQuery() {
-    pgClient.live.query("SELECT * FROM users;", [], (res) => {
-      // res is the same as a standard query result object
-      log(res)
-      liveQueryResult = res.rows.map((row) => JSON.stringify(row)).join("\n")
-    })
+    pgClient.live.query(
+      "SELECT * FROM users ORDER BY id DESC LIMIT 10;",
+      [],
+      (res) => {
+        // res is the same as a standard query result object
+        log(res)
+        liveQueryResult = res.rows.map((row) => JSON.stringify(row)).join("\n")
+      }
+    )
   }
 
   function log(...args: any[]) {
@@ -89,7 +100,9 @@
   <button onclick={insert}>Insert User</button>
   <button onclick={getUsers}>Get Users</button>
   <button onclick={startLiveQuery}>Start Live Query</button>
+  <button onclick={truncateUsers}>Truncate Users</button>
   <button onclick={dropDb}>Drop DB</button>
+  <div><button onclick={() => (logs = [])}>Clear Logs</button></div>
 
   <div>
     <textarea bind:value={rawQuery} rows={10} cols={80}></textarea>
@@ -99,13 +112,15 @@
 
   {#if liveQueryResult.length}
     <div>
-      <div>Live Query Result:</div>
+      <div>Live Query (10 latest users):</div>
       <textarea readonly rows={10} cols={80}>{liveQueryResult}</textarea>
     </div>
   {/if}
 
   <div>
     <div>Logs:</div>
-    <textarea readonly rows={50} cols={80}>{logs.join("\n")}</textarea>
+    <textarea readonly rows={50} cols={80} style="font-size: 0.3em;"
+      >{logs.join("\n")}</textarea
+    >
   </div>
 {/if}
