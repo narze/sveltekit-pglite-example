@@ -1,5 +1,6 @@
 <script lang="ts">
   import { PGlite } from "@electric-sql/pglite"
+  import { live } from "@electric-sql/pglite/live"
   import { drizzle } from "drizzle-orm/pglite"
   import * as schema from "$lib/db/schema"
   import { onMount } from "svelte"
@@ -13,18 +14,19 @@
 
   const DB_NAME = env.PUBLIC_IDB_NAME ?? "sveltekit-pglite-example"
 
-  let pgClient: PGlite
+  let pgClient: ReturnType<typeof PGlite.create>
   let db: ReturnType<typeof drizzle>
   let ready = $state(false)
   let rawQuery = $state<string>("SELECT * FROM users;")
   let logs = $state<string[]>([])
+  let liveQueryResult = $state<string>("")
 
   onMount(async () => {
     pgClient = await PGlite.create({
       dataDir: `idb://${DB_NAME}`,
-      // extensions: {
-      // 	live // Live query not supported by Drizzle
-      // }
+      extensions: {
+        live, // Live query not supported by Drizzle
+      },
     })
     db = drizzle(pgClient, { schema })
     ready = true
@@ -66,6 +68,14 @@
     log(result)
   }
 
+  function startLiveQuery() {
+    pgClient.live.query("SELECT * FROM users;", [], (res) => {
+      // res is the same as a standard query result object
+      log(res)
+      liveQueryResult = res.rows.map((row) => JSON.stringify(row)).join("\n")
+    })
+  }
+
   function log(...args: any[]) {
     console.log(...args)
     logs.push(args.map((arg) => JSON.stringify(arg)).join(" "))
@@ -76,8 +86,9 @@
   <p>Loading...</p>
 {:else}
   <button onclick={createDb}>Create DB / Migrate</button>
-  <button onclick={insert}>Insert Entry</button>
+  <button onclick={insert}>Insert User</button>
   <button onclick={getUsers}>Get Users</button>
+  <button onclick={startLiveQuery}>Start Live Query</button>
   <button onclick={dropDb}>Drop DB</button>
 
   <div>
@@ -85,6 +96,13 @@
     <br />
     <button onclick={runRawQuery}>Query</button>
   </div>
+
+  {#if liveQueryResult.length}
+    <div>
+      <div>Live Query Result:</div>
+      <textarea readonly rows={10} cols={80}>{liveQueryResult}</textarea>
+    </div>
+  {/if}
 
   <div>
     <div>Logs:</div>
