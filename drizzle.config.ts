@@ -1,14 +1,17 @@
-import { defineConfig } from 'drizzle-kit';
-if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not set');
+import { defineConfig } from "drizzle-kit"
+// if (!process.env.PUBLIC_IDB_NAME) throw new Error("PUBLIC_IDB_NAME is not set")
 
 export default defineConfig({
-  schema: './src/lib/server/db/schema.ts',
+  schema: "./src/lib/db/schema.ts",
 
-  dbCredentials: {
-    url: process.env.DATABASE_URL
-  },
+  // Not needed for IndexDB in-browser database
+  // dbCredentials: {
+  //   url: process.env.PUBLIC_IDB_NAME,
+  // },
 
   verbose: true,
   strict: true,
-  dialect: 'postgresql'
-});
+  dialect: "postgresql",
+
+  out: "./src/lib/db/migrations",
+})
