@@ -16,6 +16,8 @@
   let pgClient: PGlite
   let db: ReturnType<typeof drizzle>
   let ready = $state(false)
+  let rawQuery = $state<string>("SELECT * FROM users;")
+  let logs = $state<string[]>([])
 
   onMount(async () => {
     pgClient = await PGlite.create({
@@ -30,7 +32,7 @@
 
   async function createDb() {
     sqls.forEach(async (sql) => {
-      console.log("Running migration", sql)
+      log("Running migration", sql)
       await pgClient.exec(sql)
     })
   }
@@ -42,21 +44,31 @@
       age: ~~(Math.random() * 80),
     })
 
-    console.log({ user })
+    log({ user })
   }
 
   async function getUsers() {
     const db = drizzle(pgClient, { schema })
     const users = await db.select().from(schema.users)
-    console.log({ users })
+    log({ users })
   }
 
   async function dropDb() {
     if (confirm("Are you sure you want to drop the database?")) {
       window.indexedDB.deleteDatabase(`/pglite/${DB_NAME}`)
-      console.log("Dropped database", `/pglite/${DB_NAME}`)
+      log("Dropped database", `/pglite/${DB_NAME}`)
       window.location.reload()
     }
+  }
+
+  async function runRawQuery() {
+    const result = await pgClient.exec(rawQuery)
+    log(result)
+  }
+
+  function log(...args: any[]) {
+    console.log(...args)
+    logs.push(args.map((arg) => JSON.stringify(arg)).join(" "))
   }
 </script>
 
@@ -67,4 +79,15 @@
   <button onclick={insert}>Insert Entry</button>
   <button onclick={getUsers}>Get Users</button>
   <button onclick={dropDb}>Drop DB</button>
+
+  <div>
+    <textarea bind:value={rawQuery} rows={10} cols={80}></textarea>
+    <br />
+    <button onclick={runRawQuery}>Query</button>
+  </div>
+
+  <div>
+    <div>Logs:</div>
+    <textarea readonly rows={50} cols={80}>{logs.join("\n")}</textarea>
+  </div>
 {/if}
